@@ -1,7 +1,7 @@
 import pygame, pygbutton, time
 from pygame.locals import *
 
-
+#nota que sera tocada
 class Note(pygame.sprite.Sprite):
 
     def __init__(self, tick, y, color, chord, game, sustain, sustain_tick):
@@ -11,7 +11,7 @@ class Note(pygame.sprite.Sprite):
         self.color = color
         self.game = game
         self.hopo = False
-        #Logic for whether or not the note is part of a chord and/or a HOPO (those white notes)
+        #verifica se a nota eh uma nota de acorde
         if chord:
             self.hopo = self.game.song.note_list[-1].hopo
         else:
@@ -51,7 +51,7 @@ class Note(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = (self.x, self.y)
 
-    #Moves the notes, and handles their gruesome deaths
+    #Move as notas ou finaliza o game
     def update(self):
 
         self.rect.y += self.speed
@@ -77,7 +77,7 @@ class Note(pygame.sprite.Sprite):
                 self.game.multiplier = 1
                 self.game.partial_multiplier = 0
 
-#Controls everything directly note-related
+#Controla tudo em relacao a nota e musica
 class Song:
 
     def __init__(self, filename, game):
@@ -113,7 +113,7 @@ class Song:
         self.done = False
         self.time = 0
 
-    #Loads a chart. It's a total mess, but it works
+    #carrega o arquivo de copnfiuguracao da musica
     def load_chart(self):
         with open(self.chart, 'rb') as infile:
             for line in infile:
@@ -124,14 +124,12 @@ class Song:
                 elif 'Resolution' in line:
                     self.resolution = int(line[13:])
                     self.hopo_distance = (65*self.resolution) / 192
-                    #print self.hopo_distance
                 elif 'Offset' in line:
                     self.offset = float(line[9:])
                 elif 'BPM' in line:
                     self.bpm = int(line[6:])
                 elif 'Divisor' in line:
                     self.divisor = float(line[10:])
-                    #print self.divisor
                 elif ' B ' in line:
                     line = line.split(' ')
                     tick = int(line[0])
@@ -145,11 +143,6 @@ class Song:
                     note_beat = (tick / float(self.resolution)) + self.offset
                     pixels_per_beat = (self.bpm/60.0) * 360
                     note_y = (720.0 - (note_beat * pixels_per_beat)) / self.divisor
-                    #note_bpm_list = [i for i in self.bpm_list if i[0] <= tick]
-                    #total_y = 0
-##                    for bpm in zip(note_bpm_list, note_bpm_list[1:]):
-##                        tick1, tick2, bpm1, bpm2 = bpm[0][0], bpm[1][0], bpm[0][1], bpm[1][1]
-##                        tick_difference = tick2 - tick1
                         
                     chord = False
                     sustain = 0
@@ -191,9 +184,8 @@ class Song:
         self.bps = self.bpm / 60.0
         self.tps = self.bps * self.resolution
         self.tpf = self.tps /60.0
-        #print self.tpf
 
-    #Controls what notes are on screen, audio fadout, and end of song
+    #atualiza as notas na telas (aparecer e desaparecer)
     def update(self):
 
         self.current_y -= 6
@@ -216,16 +208,8 @@ class Song:
         if self.done:
             if time.time() - self.time > 5:
                 self.game.song_over = True
-            
-
         
-
-        
-                    
-                    
-
-        
-#Handles note hits
+#Renderiza nota a nota
 class Fret(pygame.sprite.Sprite):
 
     def __init__(self, x, y, color, num, game):
@@ -248,9 +232,8 @@ class Fret(pygame.sprite.Sprite):
         self.held_note = None
         self.held_note_s_y = None
 
-    #Used only when the player strums
+    #Verifica se a nota foi tocada
     def check_for_strum(self):
-        print('sas')
         note_hit_list = pygame.sprite.spritecollide(self, self.game.song.loaded_notes, False)
 
         for note in note_hit_list:
@@ -273,7 +256,7 @@ class Fret(pygame.sprite.Sprite):
                     note.held = True
                     self.held_note = note
 
-    #Used to check if the player has hit a HOPO, and handles sustains
+    #mesma logica usada para pontuar e evitar bug de nao ser pontuado
     def update(self):
 
         note_hit_list = pygame.sprite.spritecollide(self, self.game.song.loaded_notes, False)
@@ -418,15 +401,15 @@ class GameMain():
         #Tela de fim de jogo
         else:
 
-            self.final_score_text = self.font.render('Final Score: {}'.format(self.score), True, Color('blue'))
+            self.final_score_text = self.font.render('Pontuação Final: {}'.format(self.score), True, Color('blue'))
             self.final_score_rect = self.final_score_text.get_rect()
             self.final_score_rect.center = (self.width/2, self.height/2 - 50)
 
-            self.play_again_text = self.font.render('Press A or Green to return to menu', True, Color('green'))
+            self.play_again_text = self.font.render('Aperte A para voltar ao menu', True, Color('green'))
             self.play_again_rect = self.play_again_text.get_rect()
             self.play_again_rect.center = (self.width/2, self.height/2)
 
-            self.quit_text = self.font.render('Press S or Red to quit', True, Color('red'))
+            self.quit_text = self.font.render('Aperte S para sair', True, Color('red'))
             self.quit_rect = self.quit_text.get_rect()
             self.quit_rect.center = (self.width/2, self.height/2 + 50)
             
@@ -455,15 +438,17 @@ class GameMain():
                     menu.main_loop()
                 elif event.key == K_a:
                     self.fret0.pressed = True
-                    self.fret0.check_for_strum()
                     if self.song_over:
                         menu = Menu()
                         menu.main_loop()
+                    else:
+                        self.fret0.check_for_strum()
                 elif event.key == K_s:
                     self.fret1.pressed = True
-                    self.fret1.check_for_strum()
                     if self.song_over:
                         self.done = True
+                    else:
+                        self.fret1.check_for_strum()
                 elif event.key == K_d:
                     self.fret2.pressed = True
                     self.fret2.check_for_strum()
